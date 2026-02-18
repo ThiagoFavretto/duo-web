@@ -51,7 +51,7 @@ export function Game() {
       navigate("/");
     }
 
-    const socket = io("http://localhost:3333", {
+    const socket = io(import.meta.env.VITE_BASE, {
       query: {
         codigoJogador,
         codigoSala
