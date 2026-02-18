@@ -90,6 +90,7 @@ export function Game() {
     });
 
     socket.on("cartaJogada", (data) => {
+      console.log(vezJogadorRef.current, jogadorSessaoRef.current)
       if (vezJogadorRef.current !== jogadorSessaoRef.current) {
         const atualizar = (lista) =>
           lista.map(jogador =>
@@ -121,6 +122,7 @@ export function Game() {
       setTemHost(host)
       return
     }
+
     let jogadores = [...data];
 
     const indiceJogador = jogadores.findIndex(
@@ -184,10 +186,11 @@ export function Game() {
   async function handleJogarCarta(carta) {
     try {
       if (vezJogador == jogadorSessao) {
-        await jogarCarta(codigoSala, carta);
-
         setMinhasCartas(prev =>
           prev.filter(item => !(item.valor === carta.valor && item.cor === carta.cor)));
+
+        await jogarCarta(codigoSala, carta);
+
       }
     } catch (e) {
       console.log(e)
