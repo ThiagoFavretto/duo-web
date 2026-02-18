@@ -10,7 +10,6 @@ export const Container = styled.div`
 export const ContainerTopo = styled.div`
   display: flex;
   justify-content: center;
-  background-color: red;
 `;
 
 export const ContainerTabuleiro = styled.div`
