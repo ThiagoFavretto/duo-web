@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { Adversario } from "./components/Adversario";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
-import { comecarService } from "../../services/GameService";
+import { comecarService, jogarCarta } from "../../services/GameService";
 import { AiOutlineStop } from "react-icons/ai";
 import { GiRecycle } from "react-icons/gi";
 import { MdWindow } from "react-icons/md";
@@ -41,15 +41,17 @@ export function Game() {
   const [cartaMesa, setCartaMesa] = useState({});
   const [nick, setNick] = useState("");
   const [vezJogador, setVezJogador] = useState("");
+  const [jogadorSessao, setJogadorSessao] = useState("");
 
   const navigate = useNavigate();
 
   useEffect(() => {
     const codigoJogador = localStorage.getItem("codigoJogador");
-    setNick(localStorage.getItem("nick"));
     if (!codigoJogador) {
       navigate("/");
     }
+    setNick(localStorage.getItem("nick"));
+    setJogadorSessao(codigoJogador);
 
     const socket = io(import.meta.env.VITE_BASE, {
       query: {
@@ -73,8 +75,13 @@ export function Game() {
 
     socket.on("partidaIniciada", (data) => {
       setComecar(true)
-      console.log(data)
       setCartaMesa(data.cartaMesa);
+      setVezJogador(data.jogadorAtual)
+    });
+
+    socket.on("cartaJogada", (data) => {
+      alterarQuantidadeCartas(data);
+      setCartaMesa(data.cartaMesa)
       setVezJogador(data.jogadorAtual)
     });
 
@@ -85,7 +92,7 @@ export function Game() {
     return () => {
       socket.disconnect();
     };
-  }, [codigoSala, navigate]);
+  }, []);
 
   function novoJogador(data, codigoJogador) {
     const host = data.some(jogador => jogador.host === true)
@@ -124,6 +131,21 @@ export function Game() {
     setGrupo3(arr3);
   }
 
+  function alterarQuantidadeCartas(data) {
+    if (vezJogador != jogadorSessao) {
+      const atualizar = (lista) =>
+        lista.map(jogador =>
+          jogador.codigoJogador === vezJogador
+            ? { ...jogador, quantidadeCartas: data.cartasJogadorRestante }
+            : jogador
+        );
+
+      setGrupo1(prev => atualizar(prev));
+      setGrupo2(prev => atualizar(prev));
+      setGrupo3(prev => atualizar(prev));
+    }
+  }
+
   async function handleComecar() {
     try {
       setLoading(true);
@@ -151,6 +173,21 @@ export function Game() {
     }
 
     return val
+  }
+
+  async function handleJogarCarta(carta) {
+    try {
+      if (vezJogador) {
+        await jogarCarta(codigoSala, carta);
+
+        setVezJogador(false);
+
+        setMinhasCartas(prev =>
+          prev.filter(item => !(item.valor === carta.valor && item.cor === carta.cor)));
+      }
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   return (
@@ -208,9 +245,9 @@ export function Game() {
         </ContainerDireita>
       </ContainerTabuleiro>
       <ContainerJogador>
-        <div style={{ color: '#fff' }}>{nick}</div>
+        <div style={{ color: '#fff' }}>{nick} [{minhasCartas.length}]</div>
         {minhasCartas.map((carta, index) => (
-          <Card key={index} size={tamanhoCartas} cor={carta.cor}>
+          <Card key={index} size={tamanhoCartas} cor={carta.cor} onClick={() => handleJogarCarta(carta)}>
             <NumberTopLeft size={tamanhoCartas}>{processarCarta(carta.valor)}</NumberTopLeft>
             <NumberBottomRight size={tamanhoCartas}>{processarCarta(carta.valor)}</NumberBottomRight>
             <CenterOval size={tamanhoCartas}>
