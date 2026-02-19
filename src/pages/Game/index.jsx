@@ -207,15 +207,30 @@ export function Game() {
     return val
   }
 
+  function podeJogarCarta(carta) {
+    if (vezJogador != jogadorSessao) return false;
+
+    if (carta.valor === "coringa" || carta.valor === "+4") {
+      return true;
+    }
+
+    if (carta.cor === cartaMesa.cor || carta.valor === cartaMesa.valor) {
+      return true;
+    }
+
+    return false;
+  }
+
   async function handleJogarCarta(carta, index) {
     const bkMinhasCartas = minhasCartas;
     try {
-      if (vezJogador == jogadorSessao) {
-        setMinhasCartas(prev => prev.filter((_, i) => i !== index));
-
-        await jogarCarta(codigoSala, carta);
-
+      if (!podeJogarCarta(carta)) {
+        return;
       }
+
+      setMinhasCartas(prev => prev.filter((_, i) => i !== index));
+
+      await jogarCarta(codigoSala, carta);
     } catch (e) {
       console.log(e)
       setMinhasCartas(bkMinhasCartas)
