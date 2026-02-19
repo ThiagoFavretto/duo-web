@@ -14,3 +14,8 @@ export async function jogarCarta(codigoSala: string, carta: any) {
   const response = await api.post("/game/jogarCarta", { codigoSala, carta });
   return response.data;
 }
+
+export async function comprarCartaService(codigoSala: string) {
+  const response = await api.get(`/game/comprarCarta/${codigoSala}`);
+  return response.data;
+}

@@ -76,6 +76,7 @@ export const TotalCards = styled.div`
 `;
 
 export const Content = styled.div< { vez?: boolean; } >`
+user-select: none;
  display: flex;
  align-items: center;
  justify-content: center;

@@ -1,12 +1,14 @@
 import {
   Container, ContainerJogador, ContainerCentro, ContainerEsquerda, ContainerTopo, ContainerDireita, ContainerTabuleiro, Card, NumberTopLeft, NumberBottomRight, CenterNumber, CenterOval,
-  Comecar, Jogar, Overlay
+  Comecar, Jogar, Overlay, ContainerCor, Cor, ContainerCarta, ContainerBaralho, CartaFundo, CartaTopo,
+  Numero, Oval
+
 } from "./styles";
 import { useState, useEffect, useRef } from "react";
 import { Adversario } from "./components/Adversario";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
-import { comecarService, jogarCarta } from "../../services/GameService";
+import { comecarService, jogarCarta, comprarCartaService } from "../../services/GameService";
 import { AiOutlineStop } from "react-icons/ai";
 import { GiRecycle } from "react-icons/gi";
 import { MdWindow } from "react-icons/md";
@@ -42,6 +44,10 @@ export function Game() {
   const [nick, setNick] = useState("");
   const [vezJogador, setVezJogador] = useState("");
   const [jogadorSessao, setJogadorSessao] = useState("");
+  const [curingaJogado, setCuringaJogado] = useState(false);
+  const [acumulador, setAcumulador] = useState(0);
+  const [tipoOrdenacao, setTipoOrdenacao] = useState("cor")
+  const [ganhador, setGanhador] = useState("")
 
   const vezJogadorRef = useRef();
   const jogadorSessaoRef = useRef();
@@ -84,27 +90,25 @@ export function Game() {
     });
 
     socket.on("partidaIniciada", (data) => {
+      setGanhador("")
       setComecar(true)
       setCartaMesa(data.cartaMesa);
       setVezJogador(data.jogadorAtual)
     });
 
-    socket.on("cartaJogada", (data) => {
-      console.log(vezJogadorRef.current, jogadorSessaoRef.current)
-      if (vezJogadorRef.current !== jogadorSessaoRef.current) {
-        const atualizar = (lista) =>
-          lista.map(jogador =>
-            jogador.codigoJogador === vezJogadorRef.current
-              ? { ...jogador, quantidadeCartas: data.cartasJogadorRestante }
-              : jogador
-          );
+    socket.on("coringaJogado", () => {
+      setCuringaJogado(true)
+    });
 
-        setGrupo1(prev => atualizar(prev));
-        setGrupo2(prev => atualizar(prev));
-        setGrupo3(prev => atualizar(prev));
-      }
+    socket.on("atualizarMesa", (data) => {
+      diminuirContadorCarta(data.jogadores)
       setCartaMesa(data.cartaMesa)
-      setVezJogador(data.jogadorAtual)
+      setVezJogador(data.jogadorAtual);
+      setAcumulador(data.acumulador)
+    });
+
+    socket.on("ganhador", (data) => {
+      setGanhador(data.ganhador)
     });
 
     socket.on("disconnect", () => {
@@ -154,6 +158,26 @@ export function Game() {
     setGrupo3(arr3);
   }
 
+  function diminuirContadorCarta(jogadores) {
+    const atualizar = (grupo) =>
+      grupo.map(jogador => {
+        const jogadorAtualizado = jogadores.find(j => j.id === jogador.id);
+
+        if (jogadorAtualizado) {
+          return {
+            ...jogador,
+            quantidadeCartas: jogadorAtualizado.cartasJogadorRestante
+          };
+        }
+
+        return jogador;
+      });
+
+    setGrupo1(prev => atualizar(prev));
+    setGrupo2(prev => atualizar(prev));
+    setGrupo3(prev => atualizar(prev));
+  }
+
   async function handleComecar() {
     try {
       setLoading(true);
@@ -183,14 +207,69 @@ export function Game() {
     return val
   }
 
-  async function handleJogarCarta(carta) {
+  async function handleJogarCarta(carta, index) {
+    const bkMinhasCartas = minhasCartas;
     try {
       if (vezJogador == jogadorSessao) {
-        setMinhasCartas(prev =>
-          prev.filter(item => !(item.valor === carta.valor && item.cor === carta.cor)));
+        setMinhasCartas(prev => prev.filter((_, i) => i !== index));
 
         await jogarCarta(codigoSala, carta);
 
+      }
+    } catch (e) {
+      console.log(e)
+      setMinhasCartas(bkMinhasCartas)
+    }
+  }
+
+  async function handleEscolherCor(cor) {
+    try {
+      if (vezJogador == jogadorSessao && curingaJogado) {
+        await jogarCarta(codigoSala, { valor: cartaMesa.valor, cor });
+        setCuringaJogado(false)
+      }
+    } catch (e) {
+      console.log(e)
+    }
+  }
+
+  function ordenarCartas() {
+    setMinhasCartas(prev => {
+      const copia = [...prev];
+
+      if (tipoOrdenacao === "cor") {
+
+        const ordemCores = ["#D72600", "#0956BF", "#379711", "#ECD407"];
+
+        copia.sort((a, b) => {
+          const corA = ordemCores.indexOf(a.cor);
+          const corB = ordemCores.indexOf(b.cor);
+
+          if (corA !== corB) return corA - corB;
+          return a.valor - b.valor;
+        });
+
+        setTipoOrdenacao("valor");
+
+      } else {
+
+        copia.sort((a, b) => {
+          if (a.valor < b.valor) return -1;
+          if (a.valor > b.valor) return 1;
+          return a.cor.localeCompare(b.cor);
+        });
+
+        setTipoOrdenacao("cor");
+      }
+
+      return copia;
+    });
+  }
+
+  async function handleComprarCarta() {
+    try {
+      if (vezJogador == jogadorSessao && !curingaJogado) {
+        await comprarCartaService(codigoSala);
       }
     } catch (e) {
       console.log(e)
@@ -204,16 +283,53 @@ export function Game() {
         <ContainerEsquerda><Adversario top={false} players={grupo1} vezJogador={vezJogador}></Adversario></ContainerEsquerda>
         <ContainerCentro>{
           comecar ? (
-            <Container>
-              <div>asd</div>
-              <Card size={tamanhoCartasCentro} cor={cartaMesa.cor}>
-                <NumberTopLeft size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</NumberTopLeft>
-                <NumberBottomRight size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</NumberBottomRight>
-                <CenterOval size={tamanhoCartasCentro}>
-                  <CenterNumber size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</CenterNumber>
-                </CenterOval>
-              </Card>
-            </Container>) : (
+            ganhador ? (<Comecar>
+              Acabo<br />
+              Ganhdor: {ganhador}
+              <Jogar disabled={loading} onClick={handleComecar}>{loading ? "Iniciando..." : "Novo jogo"}</Jogar>
+              <div>{codigoSala}</div>
+            </Comecar>) : (
+              <ContainerCarta>
+                <ContainerBaralho onClick={handleComprarCarta} >
+                  <CartaFundo />
+                  <CartaTopo>
+                    <Oval>
+                      <Numero>DUO</Numero>
+                    </Oval>
+                  </CartaTopo>
+                </ContainerBaralho>
+                {curingaJogado ? (
+                  <>
+                    <Card size={tamanhoCartasCentro} cor={cartaMesa.cor}>
+                      <NumberTopLeft size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</NumberTopLeft>
+                      <NumberBottomRight size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</NumberBottomRight>
+                      <CenterOval size={tamanhoCartasCentro}>
+                        <CenterNumber size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</CenterNumber>
+                      </CenterOval>
+                    </Card>
+                    <ContainerCor>
+                      <Cor cor={"#D72600"} onClick={() => handleEscolherCor("#D72600")}></Cor>
+                      <Cor cor={"#0956BF"} onClick={() => handleEscolherCor("#0956BF")}></Cor>
+                      <Cor cor={"#379711"} onClick={() => handleEscolherCor("#379711")}></Cor>
+                      <Cor cor={"#ECD407"} onClick={() => handleEscolherCor("#ECD407")}></Cor>
+                    </ContainerCor>
+                  </>
+
+                ) : (
+                  <Card size={tamanhoCartasCentro} cor={cartaMesa.cor} vez={vezJogador == jogadorSessao}>
+                    <NumberTopLeft size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</NumberTopLeft>
+                    <NumberBottomRight size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</NumberBottomRight>
+                    <CenterOval size={tamanhoCartasCentro}>
+                      <CenterNumber size={tamanhoCartasCentro}>{processarCarta(cartaMesa.valor)}</CenterNumber>
+                    </CenterOval>
+                  </Card>
+                )}
+
+                {acumulador > 0 ? (<div>Acumulado +{acumulador}</div>) : (<div></div>)}
+
+              </ContainerCarta>
+            )
+          ) : (
             <Comecar>
               {criar ? (<>
                 <div>{codigoSala}</div>
@@ -252,9 +368,9 @@ export function Game() {
         </ContainerDireita>
       </ContainerTabuleiro>
       <ContainerJogador>
-        <div style={{ color: '#fff' }}>{nick} [{minhasCartas.length}]</div>
+        <button onClick={ordenarCartas} style={{ height: 20 }}>{nick} [{minhasCartas.length}]</button>
         {minhasCartas.map((carta, index) => (
-          <Card key={index} size={tamanhoCartas} cor={carta.cor} onClick={() => handleJogarCarta(carta)}>
+          <Card key={index} size={tamanhoCartas} cor={carta.cor} onClick={() => handleJogarCarta(carta, index)}>
             <NumberTopLeft size={tamanhoCartas}>{processarCarta(carta.valor)}</NumberTopLeft>
             <NumberBottomRight size={tamanhoCartas}>{processarCarta(carta.valor)}</NumberBottomRight>
             <CenterOval size={tamanhoCartas}>

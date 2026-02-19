@@ -1,10 +1,31 @@
-import styled from "styled-components";
+import styled, { keyframes, css } from "styled-components";
+
+const pulse = keyframes`
+  0% {
+    box-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+`;
 
 export const Container = styled.div`
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
+`;
+
+export const ContainerCarta = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 `;
 
 export const ContainerTopo = styled.div`
@@ -84,7 +105,7 @@ export const Jogar = styled.button< { disabled?: boolean; } >`
 
 ///////////////////////////
 
-export const Card = styled.div<{ size?: number, cor?: string }>`
+export const Card = styled.div<{ size?: number, cor?: string, vez?: boolean; }>`
   width: ${({ size = 220 }) => size}px;
   height: ${({ size = 220 }) => size * 1.5}px;
   background-color:  ${({ cor }) => cor};
@@ -104,6 +125,8 @@ export const Card = styled.div<{ size?: number, cor?: string }>`
     transform: translateY(-20px);
     box-shadow: 0 16px 25px rgba(0, 0, 0, 0.5);
   }
+
+  animation: ${({ vez }) => vez ? css`${pulse} 1.5s infinite` : "none"};
 `;
 
 export const CornerNumber = styled.span<{ size?: number }>`
@@ -153,4 +176,87 @@ export const Overlay = styled.div<{ isOpen: boolean }>`
   height: 100%;
   justify-content: center;
   align-items: center;
+`;
+
+export const ContainerCor = styled.div`
+  width: 220px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 20px; 
+  position: absolute;
+  margin-top: 215px;
+`;
+
+export const Cor = styled.div<{ cor: string }>`
+  background-color: ${({ cor }) => cor};
+  width: 100%;
+  height: 100px;
+`;
+
+export const ContainerBaralho = styled.div`
+  width: 120px;
+  height: 180px;
+  position: relative;
+  cursor: pointer;
+  margin-bottom: 40px;
+  user-select: none;
+`;
+
+export const CartaFundo = styled.div`
+  width: 103%;
+  height: 103%;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fff, #d72600, #fff, #d72600);
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+`;
+
+export const CartaTopo = styled.div`
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #c40000, #ff1a1a);
+  border-radius: 8px;
+  box-shadow: 0 11px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+
+   &::before {
+    content: "";
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.15) 0%,
+      transparent 60%
+    );
+    transform: rotate(25deg);
+  }
+`;
+
+export const Numero = styled.div`
+    color: #ffcc00;
+  font-size: 28px;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  transform: rotate(35deg);
+  letter-spacing: 1px;
+`;
+
+export const Oval = styled.div`
+  width: 90px;
+  height: 140px;
+  background: black;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: rotate(-25deg);
+  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.2);
 `;

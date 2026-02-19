@@ -10,7 +10,7 @@ export function Adversario({ top, players, vezJogador }) {
           <Content key={indexP} vez={player.id == vezJogador}>
             <Nome>{player.nick} <NumeroCartas>{player.quantidadeCartas || 7}</NumeroCartas></Nome>
             <TotalCards>
-              {Array.from({ length: player.quantidadeCartas || 7 }).map((_, index) => (
+              {Array.from({ length: player.quantidadeCartas && player.quantidadeCartas <= 7 ? player.quantidadeCartas : 7 }).map((_, index) => (
                 <Card key={index} size={size}>
                   <Oval size={size}>
                     <UnoText size={size}>DUO</UnoText>
